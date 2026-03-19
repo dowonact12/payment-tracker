@@ -473,25 +473,9 @@ body::before {
       <label class="form-label">결제 내용</label>
       <input class="form-input" id="rContent" placeholder="예: 우즈벡 수출 면장 수수료">
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">금액</label>
-        <input class="form-input" id="rAmount" type="number" placeholder="13420">
-      </div>
-      <div class="form-group">
-        <label class="form-label">출금 은행 (우리 쪽)</label>
-        <select class="form-input" id="rFromBank">
-          <option value="농협">농협</option>
-          <option value="기업은행">기업은행</option>
-          <option value="국민은행">국민은행</option>
-          <option value="신한은행">신한은행</option>
-          <option value="우리은행">우리은행</option>
-          <option value="하나은행">하나은행</option>
-          <option value="카카오뱅크">카카오뱅크</option>
-          <option value="법인카드">법인카드</option>
-          <option value="기타">기타</option>
-        </select>
-      </div>
+    <div class="form-group">
+      <label class="form-label">금액</label>
+      <input class="form-input" id="rAmount" type="number" placeholder="13420">
     </div>
     <div class="form-group">
       <label class="form-label">입금처 (받는 곳)</label>
@@ -749,7 +733,7 @@ function renderRequests(){
       </div>
       <div class="req-body">
         <div class="req-row"><span class="req-label">결제 내용</span><span class="req-value">${esc(r.content)}</span></div>
-        <div class="req-row"><span class="req-label">금액</span><span class="req-amount">${r.fromBank}: ${fmt(r.amount,'KRW')}</span></div>
+        <div class="req-row"><span class="req-label">금액</span><span class="req-amount">${fmt(r.amount,'KRW')}</span></div>
         <div class="req-row"><span class="req-label">입금 계좌</span></div>
         <div class="req-account-box">
           <div style="flex:1">
@@ -779,8 +763,8 @@ function openReqModal(id){
   document.getElementById('reqSaveBtn').textContent=editReqId?'수정 완료':'요청하기';
   if(editReqId){
     const r=requests.find(x=>x.id===editReqId);
-    if(r){document.getElementById('rContent').value=r.content;document.getElementById('rAmount').value=r.amount;document.getElementById('rFromBank').value=r.fromBank;document.getElementById('rToName').value=r.toName;document.getElementById('rToBank').value=r.toBank;document.getElementById('rAccount').value=r.toAccount;document.getElementById('rTax').value=r.taxInvoice;document.getElementById('rMemo').value=r.memo||'';}
-  }else{['rContent','rAmount','rToName','rAccount','rMemo'].forEach(i=>document.getElementById(i).value='');document.getElementById('rFromBank').value='농협';document.getElementById('rToBank').value='기업은행';document.getElementById('rTax').value='yes';}
+    if(r){document.getElementById('rContent').value=r.content;document.getElementById('rAmount').value=r.amount;document.getElementById('rToName').value=r.toName;document.getElementById('rToBank').value=r.toBank;document.getElementById('rAccount').value=r.toAccount;document.getElementById('rTax').value=r.taxInvoice;document.getElementById('rMemo').value=r.memo||'';}
+  }else{['rContent','rAmount','rToName','rAccount','rMemo'].forEach(i=>document.getElementById(i).value='');document.getElementById('rToBank').value='기업은행';document.getElementById('rTax').value='yes';}
   document.getElementById('reqModalOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('rContent').focus(),100);
 }
@@ -789,7 +773,6 @@ function closeReqModal(){document.getElementById('reqModalOverlay').classList.re
 function saveRequest(){
   const content=document.getElementById('rContent').value.trim();
   const amount=Number(document.getElementById('rAmount').value);
-  const fromBank=document.getElementById('rFromBank').value;
   const toName=document.getElementById('rToName').value.trim();
   const toBank=document.getElementById('rToBank').value;
   const toAccount=document.getElementById('rAccount').value.trim();
@@ -797,10 +780,10 @@ function saveRequest(){
   const memo=document.getElementById('rMemo').value.trim();
   if(!content||!amount||!toAccount){toast('⚠️ 결제 내용, 금액, 계좌번호를 입력해주세요','warning');return;}
   if(editReqId){
-    requests=requests.map(r=>r.id===editReqId?{...r,content,amount,fromBank,toName,toBank,toAccount,taxInvoice,memo}:r);
+    requests=requests.map(r=>r.id===editReqId?{...r,content,amount,toName,toBank,toAccount,taxInvoice,memo}:r);
     toast('✏️ 수정 완료!','success');
   }else{
-    requests.push({id:'r_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),content,amount,fromBank,toName,toBank,toAccount,taxInvoice,memo,status:'pending',createdAt:Date.now()});
+    requests.push({id:'r_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),content,amount,toName,toBank,toAccount,taxInvoice,memo,status:'pending',createdAt:Date.now()});
     toast('✅ 결제 요청 등록!','success');
   }
   saveR();renderRequests();closeReqModal();
