@@ -233,6 +233,44 @@ body::before {
 .pulse-dot { width:7px; height:7px; border-radius:50%; background:var(--success); display:inline-block; animation:pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
+.req-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:20px; margin-bottom:10px;
+  border-left:3px solid var(--accent); transition:all .2s;
+}
+.req-card.pending { border-left-color:var(--warning); }
+.req-card.approved { border-left-color:var(--success); }
+.req-card.rejected { border-left-color:var(--danger); }
+.req-card:hover { background:var(--card-hover); }
+.req-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.req-title { font-weight:800; font-size:15px; }
+.req-status { padding:3px 12px; border-radius:20px; font-size:11px; font-weight:700; }
+.req-status.pending { background:var(--warning-dim); color:var(--warning); }
+.req-status.approved { background:var(--success-dim); color:var(--success); }
+.req-status.rejected { background:var(--danger-dim); color:var(--danger); }
+.req-body { display:flex; flex-direction:column; gap:10px; }
+.req-row { display:flex; align-items:center; gap:8px; font-size:13px; }
+.req-label { color:var(--text-muted); font-weight:600; min-width:80px; flex-shrink:0; }
+.req-value { color:var(--text); font-weight:500; }
+.req-amount { font-size:18px; font-weight:800; color:var(--accent-light); }
+.req-account-box {
+  display:flex; align-items:center; gap:8px;
+  background:var(--bg); border:1px solid var(--border-light);
+  border-radius:10px; padding:10px 14px; margin-top:2px;
+}
+.req-account-text { font-family:'Courier New',monospace; font-size:14px; font-weight:700; letter-spacing:1px; flex:1; }
+.copy-btn {
+  padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700;
+  background:var(--accent); color:#fff; border:none; cursor:pointer;
+  transition:all .15s; white-space:nowrap;
+}
+.copy-btn:hover { background:var(--accent-light); transform:scale(1.05); }
+.copy-btn.copied { background:var(--success); }
+.req-footer { display:flex; align-items:center; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+.req-time { font-size:11px; color:var(--text-muted); }
+.req-actions { display:flex; gap:6px; }
+.req-tax { display:inline-flex; align-items:center; gap:4px; }
+
 @media (max-width:640px) {
   .stats-grid { grid-template-columns:repeat(2,1fr); }
   .header { padding:12px 16px; }
@@ -243,6 +281,8 @@ body::before {
   .search-input { width:120px; }
   .form-row,.form-row-3 { grid-template-columns:1fr; }
   .history-summary { gap:16px; }
+  .req-label { min-width:65px; }
+  .req-amount { font-size:15px; }
 }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -273,8 +313,9 @@ body::before {
 
 <div class="container">
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('main',this)">📋 결제 관리</button>
-    <button class="tab-btn" onclick="switchTab('history',this)">📜 결제 히스토리</button>
+    <button class="tab-btn active" onclick="switchTab('main',this)">📋 관리</button>
+    <button class="tab-btn" onclick="switchTab('request',this)">💳 결제 요청</button>
+    <button class="tab-btn" onclick="switchTab('history',this)">📜 히스토리</button>
   </div>
 
   <!-- Main Tab -->
@@ -293,6 +334,20 @@ body::before {
       <input class="search-input" type="text" placeholder="검색..." oninput="searchQuery=this.value;render()">
     </div>
     <div class="payment-list" id="paymentList"></div>
+  </div>
+
+  <!-- Request Tab -->
+  <div id="requestTab" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--text-muted);font-weight:600" id="reqCount">총 0건</div>
+      <button class="btn btn-primary" onclick="openReqModal()"><span style="font-size:16px;line-height:1">+</span> 결제 요청</button>
+    </div>
+    <div class="filter-bar">
+      <button class="filter-btn active" data-rfilter="all" onclick="setRFilter('all',this)">전체</button>
+      <button class="filter-btn" data-rfilter="pending" onclick="setRFilter('pending',this)">대기</button>
+      <button class="filter-btn" data-rfilter="approved" onclick="setRFilter('approved',this)">승인</button>
+    </div>
+    <div id="requestList"></div>
   </div>
 
   <!-- History Tab -->
@@ -383,6 +438,78 @@ body::before {
   </div>
 </div>
 
+<!-- Request Modal -->
+<div class="modal-overlay" id="reqModalOverlay" onclick="if(event.target===this)closeReqModal()">
+  <div class="modal">
+    <h2 id="reqModalTitle">결제 요청서 작성</h2>
+    <div class="form-group">
+      <label class="form-label">결제 내용</label>
+      <input class="form-input" id="rContent" placeholder="예: 우즈벡 수출 면장 수수료">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">금액</label>
+        <input class="form-input" id="rAmount" type="number" placeholder="13420">
+      </div>
+      <div class="form-group">
+        <label class="form-label">출금 은행 (우리 쪽)</label>
+        <select class="form-input" id="rFromBank">
+          <option value="농협">농협</option>
+          <option value="기업은행">기업은행</option>
+          <option value="국민은행">국민은행</option>
+          <option value="신한은행">신한은행</option>
+          <option value="우리은행">우리은행</option>
+          <option value="하나은행">하나은행</option>
+          <option value="카카오뱅크">카카오뱅크</option>
+          <option value="법인카드">법인카드</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">입금처 (받는 곳)</label>
+      <input class="form-input" id="rToName" placeholder="예: 이오스 관세법인">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">입금 은행</label>
+        <select class="form-input" id="rToBank">
+          <option value="기업은행">기업은행</option>
+          <option value="농협">농협</option>
+          <option value="국민은행">국민은행</option>
+          <option value="신한은행">신한은행</option>
+          <option value="우리은행">우리은행</option>
+          <option value="하나은행">하나은행</option>
+          <option value="카카오뱅크">카카오뱅크</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">계좌번호</label>
+        <input class="form-input" id="rAccount" placeholder="051-135030-04-011">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">세금계산서</label>
+        <select class="form-input" id="rTax">
+          <option value="yes">발행</option>
+          <option value="no">미발행</option>
+          <option value="na">해당없음</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">메모 (선택)</label>
+        <input class="form-input" id="rMemo" placeholder="참고사항...">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeReqModal()" style="justify-content:center">취소</button>
+      <button class="btn btn-primary" onclick="saveRequest()" id="reqSaveBtn" style="justify-content:center">요청하기</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════════════════
 // Firebase 설정 - 본인의 Firebase 프로젝트 설정값으로 교체하세요
@@ -398,28 +525,30 @@ const firebaseConfig = {
 };
 
 // ─── 이중 저장 시스템 (localStorage 항상 + Firebase 선택) ───
-const SK='payment-tracker-data-v3', HK='payment-tracker-history-v3';
+const SK='payment-tracker-data-v3', HK='payment-tracker-history-v3', RK='payment-tracker-requests-v1';
 const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
-let db, paymentsRef, historyRef;
+let db, paymentsRef, historyRef, requestsRef;
 if(isFirebaseConfigured){
   try{
     firebase.initializeApp(firebaseConfig);
     db=firebase.firestore();
     paymentsRef=db.collection('appData').doc('payments');
     historyRef=db.collection('appData').doc('history');
+    requestsRef=db.collection('appData').doc('requests');
   }catch(e){ console.error('Firebase init failed:',e); db=null; }
 }
 
 const CATS={'서비스':'💻','임대료':'🏢','보험':'🛡️','광고비':'📢','인건비':'👤','물류비':'📦','기타':'📋'};
 const CYCLES={monthly:'매월',weekly:'매주',yearly:'매년',once:'1회'};
-let payments=[],hist=[];
+let payments=[],hist=[],requests=[];
 let currentFilter='all',searchQuery='',editId=null;
 let notifEnabled=false,notifChecked=false;
-let hFilter='all',hSearch='';
+let hFilter='all',hSearch='',rFilter='all',editReqId=null;
 
 // localStorage 저장 (항상 실행 - 절대 실패하지 않음)
 function saveLocal(){ try{localStorage.setItem(SK,JSON.stringify(payments))}catch(e){} }
 function saveLocalH(){ try{localStorage.setItem(HK,JSON.stringify(hist))}catch(e){} }
+function saveLocalR(){ try{localStorage.setItem(RK,JSON.stringify(requests))}catch(e){} }
 
 // 통합 저장: localStorage(즉시) + Firebase(동기화)
 function save(){
@@ -430,13 +559,18 @@ function saveH(){
   saveLocalH();
   if(db) historyRef.set({items:hist}).catch(e=>{console.error(e);toast('⚠️ 클라우드 저장 실패 (로컬 저장됨)','warning');});
 }
+function saveR(){
+  saveLocalR();
+  if(db) requestsRef.set({items:requests}).catch(e=>{console.error(e);toast('⚠️ 클라우드 저장 실패 (로컬 저장됨)','warning');});
+}
 
 // localStorage에서 즉시 로드
 function loadLocal(){
   try{
     const r=localStorage.getItem(SK); if(r) payments=JSON.parse(r);
     const h=localStorage.getItem(HK); if(h) hist=JSON.parse(h);
-  }catch(e){ payments=[]; hist=[]; }
+    const q=localStorage.getItem(RK); if(q) requests=JSON.parse(q);
+  }catch(e){ payments=[]; hist=[]; requests=[]; }
 }
 
 function fmt(n,cur){
@@ -464,8 +598,10 @@ function switchTab(tab,btn){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('mainTab').style.display=tab==='main'?'':'none';
+  document.getElementById('requestTab').style.display=tab==='request'?'':'none';
   document.getElementById('historyTab').style.display=tab==='history'?'':'none';
   if(tab==='history') renderHistory();
+  if(tab==='request') renderRequests();
 }
 
 function render(){
@@ -563,6 +699,105 @@ function renderHistory(){
   el.innerHTML=html;
 }
 
+// ─── 결제 요청 기능 ───
+const STATUS_MAP={pending:{text:'대기',cls:'pending'},approved:{text:'승인',cls:'approved'},rejected:{text:'반려',cls:'rejected'}};
+
+function renderRequests(){
+  let list=[...requests];
+  if(rFilter!=='all') list=list.filter(r=>r.status===rFilter);
+  list.sort((a,b)=>b.createdAt-a.createdAt);
+  const pending=requests.filter(r=>r.status==='pending').length;
+  document.getElementById('reqCount').textContent=`총 ${list.length}건${pending>0?' (대기 '+pending+'건)':''}`;
+
+  const el=document.getElementById('requestList');
+  if(!list.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">💳</div><div class="empty-text">결제 요청이 없습니다<br><span style="font-size:12px;color:var(--text-muted)">+ 결제 요청 버튼으로 새 요청을 작성하세요</span></div></div>`;return;}
+  el.innerHTML=list.map(r=>{
+    const st=STATUS_MAP[r.status]||STATUS_MAP.pending;
+    const tx=r.taxInvoice==='yes'?'○ 발행':r.taxInvoice==='no'?'✕ 미발행':'- 해당없음';
+    const txCls=r.taxInvoice==='yes'?'tax-yes':r.taxInvoice==='no'?'tax-no':'tax-na';
+    return `<div class="req-card ${st.cls}">
+      <div class="req-header">
+        <div class="req-title">💰 결제 요청드립니다!</div>
+        <span class="req-status ${st.cls}">${st.text}</span>
+      </div>
+      <div class="req-body">
+        <div class="req-row"><span class="req-label">결제 내용</span><span class="req-value">${esc(r.content)}</span></div>
+        <div class="req-row"><span class="req-label">금액</span><span class="req-amount">${r.fromBank}: ${fmt(r.amount,'KRW')}</span></div>
+        <div class="req-row"><span class="req-label">입금 계좌</span></div>
+        <div class="req-account-box">
+          <div style="flex:1">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">${esc(r.toName)} ${esc(r.toBank)}</div>
+            <div class="req-account-text">${esc(r.toAccount)}</div>
+          </div>
+          <button class="copy-btn" onclick="copyAccount(this,'${esc(r.toAccount)}')">복사</button>
+        </div>
+        <div class="req-row"><span class="req-label">세금계산서</span><span class="badge ${txCls}" style="font-size:12px">${tx}</span></div>
+        ${r.memo?`<div class="req-row"><span class="req-label">메모</span><span class="req-value" style="color:var(--text-muted)">${esc(r.memo)}</span></div>`:''}
+      </div>
+      <div class="req-footer">
+        <span class="req-time">${fmtDT(r.createdAt)}</span>
+        <div class="req-actions">
+          ${r.status==='pending'?`<button class="btn btn-outline" style="padding:5px 12px;font-size:11px" onclick="approveReq('${r.id}')">✓ 승인</button>`:''}
+          <button class="btn-ghost" title="수정" onclick="editReq('${r.id}')">✎</button>
+          <button class="btn-danger" title="삭제" onclick="delReq('${r.id}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openReqModal(id){
+  editReqId=id||null;
+  document.getElementById('reqModalTitle').textContent=editReqId?'결제 요청 수정':'결제 요청서 작성';
+  document.getElementById('reqSaveBtn').textContent=editReqId?'수정 완료':'요청하기';
+  if(editReqId){
+    const r=requests.find(x=>x.id===editReqId);
+    if(r){document.getElementById('rContent').value=r.content;document.getElementById('rAmount').value=r.amount;document.getElementById('rFromBank').value=r.fromBank;document.getElementById('rToName').value=r.toName;document.getElementById('rToBank').value=r.toBank;document.getElementById('rAccount').value=r.toAccount;document.getElementById('rTax').value=r.taxInvoice;document.getElementById('rMemo').value=r.memo||'';}
+  }else{['rContent','rAmount','rToName','rAccount','rMemo'].forEach(i=>document.getElementById(i).value='');document.getElementById('rFromBank').value='농협';document.getElementById('rToBank').value='기업은행';document.getElementById('rTax').value='yes';}
+  document.getElementById('reqModalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('rContent').focus(),100);
+}
+function closeReqModal(){document.getElementById('reqModalOverlay').classList.remove('open');editReqId=null;}
+
+function saveRequest(){
+  const content=document.getElementById('rContent').value.trim();
+  const amount=Number(document.getElementById('rAmount').value);
+  const fromBank=document.getElementById('rFromBank').value;
+  const toName=document.getElementById('rToName').value.trim();
+  const toBank=document.getElementById('rToBank').value;
+  const toAccount=document.getElementById('rAccount').value.trim();
+  const taxInvoice=document.getElementById('rTax').value;
+  const memo=document.getElementById('rMemo').value.trim();
+  if(!content||!amount||!toAccount){toast('⚠️ 결제 내용, 금액, 계좌번호를 입력해주세요','warning');return;}
+  if(editReqId){
+    requests=requests.map(r=>r.id===editReqId?{...r,content,amount,fromBank,toName,toBank,toAccount,taxInvoice,memo}:r);
+    toast('✏️ 수정 완료!','success');
+  }else{
+    requests.push({id:'r_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),content,amount,fromBank,toName,toBank,toAccount,taxInvoice,memo,status:'pending',createdAt:Date.now()});
+    toast('✅ 결제 요청 등록!','success');
+  }
+  saveR();renderRequests();closeReqModal();
+}
+
+function editReq(id){openReqModal(id);}
+function delReq(id){const r=requests.find(x=>x.id===id);if(confirm(`"${r.content}" 요청을 삭제하시겠습니까?`)){requests=requests.filter(x=>x.id!==id);saveR();renderRequests();toast('🗑️ 삭제되었습니다','danger');}}
+function approveReq(id){requests=requests.map(r=>r.id===id?{...r,status:'approved'}:r);saveR();renderRequests();toast('✅ 승인 완료!','success');}
+function setRFilter(f,btn){rFilter=f;document.querySelectorAll('[data-rfilter]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderRequests();}
+
+function copyAccount(btn,account){
+  navigator.clipboard.writeText(account).then(()=>{
+    btn.textContent='복사됨!';btn.classList.add('copied');
+    toast('📋 계좌번호가 복사되었습니다','success');
+    setTimeout(()=>{btn.textContent='복사';btn.classList.remove('copied');},2000);
+  }).catch(()=>{
+    // fallback
+    const t=document.createElement('textarea');t.value=account;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);
+    btn.textContent='복사됨!';btn.classList.add('copied');
+    toast('📋 계좌번호가 복사되었습니다','success');
+    setTimeout(()=>{btn.textContent='복사';btn.classList.remove('copied');},2000);
+  });
+}
+
 function setFilter(f,btn){currentFilter=f;document.querySelectorAll('[data-filter]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');render();}
 function setHFilter(f,btn){hFilter=f;document.querySelectorAll('[data-hfilter]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderHistory();}
 function toggleCustomCat(){document.getElementById('customCatGroup').style.display=document.getElementById('fCategory').value==='기타'?'':'none';}
@@ -628,7 +863,7 @@ function sendN(t,b){if('Notification'in window&&Notification.permission==='grant
 function toast(msg,type='success'){const c=document.getElementById('toastContainer'),t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=`<span>${msg}</span>`;c.appendChild(t);setTimeout(()=>t.remove(),4000);}
 
 function exportData(){
-  const data={payments,history:hist,exportedAt:new Date().toISOString()};
+  const data={payments,history:hist,requests,exportedAt:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;
@@ -645,14 +880,19 @@ function handleImport(e){
       const data=JSON.parse(ev.target.result);
       if(data.payments)payments=data.payments;
       if(data.history)hist=data.history;
-      save();saveH();render();
-      toast(`📂 복원 완료! (결제 ${payments.length}건, 히스토리 ${hist.length}건)`,'success');
+      if(data.requests)requests=data.requests;
+      save();saveH();saveR();render();
+      toast(`📂 복원 완료! (결제 ${payments.length}건, 히스토리 ${hist.length}건, 요청 ${requests.length}건)`,'success');
     }catch{toast('⚠️ 파일을 읽을 수 없습니다','danger');}
   };
   reader.readAsText(file);e.target.value='';
 }
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if(e.key==='Enter'&&document.getElementById('modalOverlay').classList.contains('open'))savePayment();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModal();closeReqModal();}
+  if(e.key==='Enter'&&document.getElementById('modalOverlay').classList.contains('open'))savePayment();
+  if(e.key==='Enter'&&document.getElementById('reqModalOverlay').classList.contains('open'))saveRequest();
+});
 
 // ─── 초기화: localStorage 먼저 로드 (즉시 표시) ───
 loadLocal();
@@ -687,6 +927,18 @@ if(db){
     firstHistory=false;
     if(document.getElementById('historyTab').style.display!=='none') renderHistory();
   },err=>console.error('Firestore history error:',err));
+
+  let firstRequests=true;
+  requestsRef.onSnapshot(doc=>{
+    if(doc.exists && doc.data().items && doc.data().items.length>0){
+      requests=doc.data().items;
+      saveLocalR();
+    }else if(firstRequests && requests.length>0){
+      requestsRef.set({items:requests});
+    }
+    firstRequests=false;
+    if(document.getElementById('requestTab').style.display!=='none') renderRequests();
+  },err=>console.error('Firestore requests error:',err));
 }else{
   updateSyncStatus('local');
 }
