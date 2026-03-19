@@ -313,13 +313,13 @@ body::before {
 
 <div class="container">
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('main',this)">📋 관리</button>
-    <button class="tab-btn" onclick="switchTab('request',this)">💳 결제 요청</button>
+    <button class="tab-btn active" onclick="switchTab('request',this)">💳 결제 요청</button>
+    <button class="tab-btn" onclick="switchTab('main',this)">📋 관리</button>
     <button class="tab-btn" onclick="switchTab('history',this)">📜 히스토리</button>
   </div>
 
   <!-- Main Tab -->
-  <div id="mainTab">
+  <div id="mainTab" style="display:none">
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">월 고정비</div><div class="stat-value blue" id="statMonthly" style="font-size:14px">0원</div></div>
       <div class="stat-card"><div class="stat-icon">🚨</div><div class="stat-label">미결제</div><div class="stat-value red" id="statOverdue">0건</div></div>
@@ -337,7 +337,7 @@ body::before {
   </div>
 
   <!-- Request Tab -->
-  <div id="requestTab" style="display:none">
+  <div id="requestTab">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div style="font-size:13px;color:var(--text-muted);font-weight:600" id="reqCount">총 0건</div>
       <button class="btn btn-primary" onclick="openReqModal()"><span style="font-size:16px;line-height:1">+</span> 결제 요청</button>
@@ -897,6 +897,7 @@ document.addEventListener('keydown',e=>{
 // ─── 초기화: localStorage 먼저 로드 (즉시 표시) ───
 loadLocal();
 render();
+renderRequests();
 
 // ─── Firebase 실시간 리스너 (설정된 경우만) ───
 if(db){
