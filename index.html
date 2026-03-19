@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💰 결제 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e17;
+  --bg2: #0f1520;
+  --card: #151d2e;
+  --card-hover: #1a2540;
+  --accent: #4f8ff7;
+  --accent-light: #70a5ff;
+  --accent-dim: #1a3060;
+  --danger: #f05050;
+  --danger-dim: #3d1515;
+  --success: #2dd4a0;
+  --success-dim: #0d3d2e;
+  --warning: #f5b731;
+  --warning-dim: #3d2e0a;
+  --text: #eef2f9;
+  --text-sub: #8ea3c4;
+  --text-muted: #556b8a;
+  --border: #1e2d44;
+  --border-light: #2a3d5a;
+  --radius: 14px;
+  --shadow: 0 4px 24px rgba(0,0,0,.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Noto Sans KR',-apple-system,sans-serif;
+  background:var(--bg); color:var(--text); min-height:100vh;
+}
+body::before {
+  content:''; position:fixed; top:-200px; right:-200px;
+  width:600px; height:600px;
+  background:radial-gradient(circle,rgba(79,143,247,.08) 0%,transparent 70%);
+  pointer-events:none; z-index:0;
+}
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border-light); border-radius:8px; }
+
+.header {
+  position:sticky; top:0; z-index:100;
+  background:linear-gradient(180deg,var(--bg2) 0%,rgba(15,21,32,.95) 100%);
+  backdrop-filter:blur(12px); border-bottom:1px solid var(--border);
+  padding:16px 28px; display:flex; align-items:center; justify-content:space-between;
+}
+.header-left { display:flex; align-items:center; gap:14px; }
+.header-icon {
+  width:44px; height:44px; border-radius:14px;
+  background:linear-gradient(135deg,var(--accent-dim),rgba(79,143,247,.15));
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; border:1px solid var(--border);
+}
+.header-title { font-size:20px; font-weight:800; letter-spacing:-0.5px; }
+.header-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+.header-actions { display:flex; gap:8px; align-items:center; }
+
+.btn {
+  padding:9px 18px; border-radius:10px; font-size:13px;
+  font-weight:600; border:none; cursor:pointer;
+  transition:all .2s; font-family:inherit;
+  display:flex; align-items:center; gap:6px;
+}
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:var(--accent-light); transform:translateY(-1px); }
+.btn-outline { background:transparent; color:var(--text-muted); border:1px solid var(--border); }
+.btn-outline:hover { border-color:var(--accent); color:var(--accent-light); }
+.btn-outline.active { border-color:var(--accent); color:var(--accent-light); background:var(--accent-dim); }
+.btn-ghost { background:transparent; color:var(--text-muted); padding:8px; border:none; cursor:pointer; border-radius:8px; font-family:inherit; transition:all .15s; }
+.btn-ghost:hover { color:var(--text); background:var(--border); }
+.btn-danger { background:transparent; color:var(--text-muted); padding:8px; border:none; cursor:pointer; border-radius:8px; font-family:inherit; transition:all .15s; }
+.btn-danger:hover { color:var(--danger); background:var(--danger-dim); }
+
+.container { max-width:880px; margin:0 auto; padding:24px 20px 100px; position:relative; z-index:1; }
+
+.tabs { display:flex; gap:4px; margin-bottom:24px; background:var(--card); border-radius:12px; padding:4px; border:1px solid var(--border); }
+.tab-btn {
+  flex:1; padding:10px; border-radius:9px; text-align:center;
+  font-size:13px; font-weight:600; cursor:pointer;
+  background:transparent; color:var(--text-muted); border:none;
+  font-family:inherit; transition:all .2s;
+}
+.tab-btn:hover { color:var(--text-sub); }
+.tab-btn.active { background:var(--accent-dim); color:var(--accent-light); }
+
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.stat-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:18px 16px; transition:all .25s;
+}
+.stat-card:hover { border-color:var(--border-light); transform:translateY(-2px); box-shadow:var(--shadow); }
+.stat-icon { font-size:22px; margin-bottom:8px; }
+.stat-label { font-size:11px; color:var(--text-muted); font-weight:600; letter-spacing:.5px; margin-bottom:6px; }
+.stat-value { font-size:17px; font-weight:800; }
+.stat-value.blue { color:var(--accent-light); }
+.stat-value.red { color:var(--danger); }
+.stat-value.yellow { color:var(--warning); }
+.stat-value.green { color:var(--success); }
+
+.filter-bar { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; align-items:center; }
+.filter-btn {
+  padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600;
+  border:1px solid var(--border); background:transparent; color:var(--text-muted);
+  cursor:pointer; transition:all .15s; font-family:inherit;
+}
+.filter-btn:hover { border-color:var(--border-light); color:var(--text-sub); }
+.filter-btn.active { border-color:var(--accent); background:var(--accent-dim); color:var(--accent-light); }
+.search-input {
+  margin-left:auto; padding:7px 14px; border-radius:8px;
+  border:1px solid var(--border); background:var(--card);
+  color:var(--text); font-size:12px; outline:none;
+  font-family:inherit; width:160px; transition:border-color .2s;
+}
+.search-input:focus { border-color:var(--accent); }
+
+.payment-list { display:flex; flex-direction:column; gap:8px; }
+.payment-item {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px 20px;
+  display:flex; align-items:center; gap:14px;
+  transition:all .2s; border-left:3px solid var(--border);
+}
+.payment-item:hover { background:var(--card-hover); }
+.payment-item.overdue { border-left-color:var(--danger); }
+.payment-item.today { border-left-color:var(--warning); }
+.payment-item.soon { border-left-color:var(--warning); }
+.payment-item.upcoming { border-left-color:var(--accent-light); }
+
+.pay-icon {
+  width:44px; height:44px; border-radius:12px; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;
+}
+.pay-info { flex:1; min-width:0; }
+.pay-top { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.pay-name { font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.badge {
+  padding:2px 9px; border-radius:20px; font-size:11px;
+  font-weight:700; white-space:nowrap; letter-spacing:.3px;
+}
+.badge.overdue { background:var(--danger-dim); color:var(--danger); }
+.badge.today { background:var(--warning-dim); color:var(--warning); }
+.badge.soon { background:var(--warning-dim); color:var(--warning); }
+.badge.upcoming { background:var(--accent-dim); color:var(--accent-light); }
+.badge.normal { background:var(--border); color:var(--text-sub); }
+.badge.tax-yes { background:var(--success-dim); color:var(--success); }
+.badge.tax-no { background:var(--danger-dim); color:var(--danger); }
+.badge.tax-na { background:var(--border); color:var(--text-muted); }
+
+.pay-meta { display:flex; gap:12px; font-size:12px; color:var(--text-muted); flex-wrap:wrap; }
+.pay-amount { font-weight:800; font-size:15px; white-space:nowrap; margin-right:10px; }
+.pay-actions { display:flex; gap:2px; flex-shrink:0; }
+
+.history-item {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:14px 20px;
+  display:flex; align-items:center; gap:14px;
+}
+.history-date-group { margin-bottom:12px; }
+.history-date-label {
+  font-size:12px; font-weight:700; color:var(--text-muted);
+  padding:10px 4px 6px; letter-spacing:.5px;
+}
+.history-amount { font-weight:700; font-size:14px; white-space:nowrap; margin-left:auto; margin-right:8px; }
+.history-meta { font-size:11px; color:var(--text-muted); }
+
+.history-summary {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:20px; margin-bottom:20px;
+  display:flex; gap:28px; flex-wrap:wrap;
+}
+.history-stat { display:flex; flex-direction:column; gap:4px; }
+.history-stat-label { font-size:11px; color:var(--text-muted); font-weight:600; }
+.history-stat-value { font-size:16px; font-weight:800; }
+
+.empty-state { text-align:center; padding:80px 20px; color:var(--text-muted); }
+.empty-icon { font-size:48px; margin-bottom:16px; }
+.empty-text { font-size:14px; line-height:1.8; }
+
+.modal-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.6); backdrop-filter:blur(6px);
+  z-index:500; align-items:center; justify-content:center; padding:16px;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:20px; padding:32px; width:100%; max-width:480px;
+  box-shadow:0 20px 60px rgba(0,0,0,.5); max-height:90vh; overflow-y:auto;
+  animation:modalIn .25s ease;
+}
+@keyframes modalIn { from{opacity:0;transform:scale(.95) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.modal h2 { font-size:18px; font-weight:800; margin-bottom:24px; }
+.form-group { margin-bottom:16px; }
+.form-label { display:block; font-size:12px; font-weight:600; color:var(--text-sub); margin-bottom:6px; letter-spacing:.3px; }
+.form-input {
+  width:100%; padding:11px 14px; border-radius:10px;
+  border:1px solid var(--border-light); background:var(--bg);
+  color:var(--text); font-size:14px; outline:none;
+  font-family:inherit; transition:border-color .2s;
+}
+.form-input:focus { border-color:var(--accent); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-row-3 { display:grid; grid-template-columns:auto 1fr 1fr; gap:12px; }
+.modal-actions { display:flex; gap:10px; margin-top:28px; }
+.modal-actions .btn { flex:1; justify-content:center; padding:12px; }
+.modal-actions .btn:last-child { flex:2; }
+
+.toast-container { position:fixed; top:20px; right:20px; z-index:1000; display:flex; flex-direction:column; gap:8px; }
+.toast {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:14px 20px; font-size:13px; font-weight:500;
+  box-shadow:var(--shadow); display:flex; align-items:center; gap:10px;
+  animation:toastIn .3s ease,toastOut .3s ease 3.7s forwards; max-width:380px;
+}
+.toast.warning { border-left:3px solid var(--warning); }
+.toast.danger { border-left:3px solid var(--danger); }
+.toast.success { border-left:3px solid var(--success); }
+@keyframes toastIn { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+@keyframes toastOut { from{opacity:1} to{opacity:0;transform:translateX(40px)} }
+
+.footer { position:fixed; bottom:0; left:0; right:0; background:linear-gradient(180deg,transparent,var(--bg) 40%); padding:20px 0 16px; text-align:center; z-index:50; }
+.footer-inner {
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:20px; padding:7px 18px; font-size:11px; color:var(--text-muted);
+}
+.pulse-dot { width:7px; height:7px; border-radius:50%; background:var(--success); display:inline-block; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+@media (max-width:640px) {
+  .stats-grid { grid-template-columns:repeat(2,1fr); }
+  .header { padding:12px 16px; }
+  .container { padding:16px 12px 100px; }
+  .payment-item,.history-item { padding:14px; gap:10px; }
+  .pay-amount { font-size:13px; }
+  .pay-icon { width:38px; height:38px; font-size:17px; }
+  .search-input { width:120px; }
+  .form-row,.form-row-3 { grid-template-columns:1fr; }
+  .history-summary { gap:16px; }
+}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<header class="header">
+  <div class="header-left">
+    <div class="header-icon">💰</div>
+    <div>
+      <div class="header-title">결제 관리</div>
+      <div class="header-sub" id="syncStatus">클라우드 · 연결 중...</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline" onclick="exportData()">💾 백업</button>
+    <button class="btn btn-outline" onclick="importData()">📂 복원</button>
+    <button class="btn btn-outline" id="notifBtn" onclick="toggleNotif()">🔕 알림 OFF</button>
+    <button class="btn btn-primary" onclick="openModal()">
+      <span style="font-size:16px;line-height:1">+</span> 결제 추가
+    </button>
+  </div>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('main',this)">📋 결제 관리</button>
+    <button class="tab-btn" onclick="switchTab('history',this)">📜 결제 히스토리</button>
+  </div>
+
+  <!-- Main Tab -->
+  <div id="mainTab">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">월 고정비</div><div class="stat-value blue" id="statMonthly" style="font-size:14px">0원</div></div>
+      <div class="stat-card"><div class="stat-icon">🚨</div><div class="stat-label">미결제</div><div class="stat-value red" id="statOverdue">0건</div></div>
+      <div class="stat-card"><div class="stat-icon">📌</div><div class="stat-label">오늘 결제</div><div class="stat-value yellow" id="statToday">0건</div></div>
+      <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">이번 주</div><div class="stat-value green" id="statWeek">0건</div></div>
+    </div>
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">전체</button>
+      <button class="filter-btn" data-filter="overdue" onclick="setFilter('overdue',this)">미결제</button>
+      <button class="filter-btn" data-filter="today" onclick="setFilter('today',this)">오늘</button>
+      <button class="filter-btn" data-filter="week" onclick="setFilter('week',this)">이번 주</button>
+      <input class="search-input" type="text" placeholder="검색..." oninput="searchQuery=this.value;render()">
+    </div>
+    <div class="payment-list" id="paymentList"></div>
+  </div>
+
+  <!-- History Tab -->
+  <div id="historyTab" style="display:none">
+    <div class="history-summary" id="historySummary"></div>
+    <div class="filter-bar">
+      <button class="filter-btn active" data-hfilter="all" onclick="setHFilter('all',this)">전체</button>
+      <button class="filter-btn" data-hfilter="month" onclick="setHFilter('month',this)">이번 달</button>
+      <button class="filter-btn" data-hfilter="3month" onclick="setHFilter('3month',this)">최근 3개월</button>
+      <input class="search-input" type="text" placeholder="히스토리 검색..." oninput="hSearch=this.value;renderHistory()">
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<div class="footer"><div class="footer-inner"><span class="pulse-dot"></span>클라우드 저장 · 실시간 동기화</div></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="modalTitle">새 결제 등록</h2>
+    <div class="form-group">
+      <label class="form-label">결제 항목명</label>
+      <input class="form-input" id="fName" placeholder="예: AWS 서버 호스팅">
+    </div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label class="form-label">통화</label>
+        <select class="form-input" id="fCurrency" style="width:100px">
+          <option value="KRW">🇰🇷 원</option>
+          <option value="USD">🇺🇸 달러</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">금액</label>
+        <input class="form-input" id="fAmount" type="number" placeholder="150000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">결제일</label>
+        <input class="form-input" id="fDate" type="date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">결제 주기</label>
+        <select class="form-input" id="fCycle">
+          <option value="monthly">매월</option>
+          <option value="weekly">매주</option>
+          <option value="yearly">매년</option>
+          <option value="once">1회</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">카테고리</label>
+        <select class="form-input" id="fCategory" onchange="toggleCustomCat()">
+          <option value="서비스">💻 서비스</option>
+          <option value="임대료">🏢 임대료</option>
+          <option value="보험">🛡️ 보험</option>
+          <option value="광고비">📢 광고비</option>
+          <option value="인건비">👤 인건비</option>
+          <option value="물류비">📦 물류비</option>
+          <option value="기타">📋 기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" id="customCatGroup" style="display:none">
+      <label class="form-label">기타 카테고리명</label>
+      <input class="form-input" id="fCustomCat" placeholder="예: 교통비, 식대, 교육비...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">세금계산서</label>
+        <select class="form-input" id="fTax">
+          <option value="no">미발행</option>
+          <option value="yes">발행</option>
+          <option value="na">해당없음</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">메모 (선택)</label>
+        <input class="form-input" id="fMemo" placeholder="참고사항...">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()" style="justify-content:center">취소</button>
+      <button class="btn btn-primary" onclick="savePayment()" id="saveBtn" style="justify-content:center">등록하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// Firebase 설정 - 본인의 Firebase 프로젝트 설정값으로 교체하세요
+// Firebase Console → 프로젝트 설정 → 웹 앱에서 복사
+// ════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// ─── 이중 저장 시스템 (localStorage 항상 + Firebase 선택) ───
+const SK='payment-tracker-data-v3', HK='payment-tracker-history-v3';
+const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+let db, paymentsRef, historyRef;
+if(isFirebaseConfigured){
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    paymentsRef=db.collection('appData').doc('payments');
+    historyRef=db.collection('appData').doc('history');
+  }catch(e){ console.error('Firebase init failed:',e); db=null; }
+}
+
+const CATS={'서비스':'💻','임대료':'🏢','보험':'🛡️','광고비':'📢','인건비':'👤','물류비':'📦','기타':'📋'};
+const CYCLES={monthly:'매월',weekly:'매주',yearly:'매년',once:'1회'};
+let payments=[],hist=[];
+let currentFilter='all',searchQuery='',editId=null;
+let notifEnabled=false,notifChecked=false;
+let hFilter='all',hSearch='';
+
+// localStorage 저장 (항상 실행 - 절대 실패하지 않음)
+function saveLocal(){ try{localStorage.setItem(SK,JSON.stringify(payments))}catch(e){} }
+function saveLocalH(){ try{localStorage.setItem(HK,JSON.stringify(hist))}catch(e){} }
+
+// 통합 저장: localStorage(즉시) + Firebase(동기화)
+function save(){
+  saveLocal();
+  if(db) paymentsRef.set({items:payments}).catch(e=>{console.error(e);toast('⚠️ 클라우드 저장 실패 (로컬 저장됨)','warning');});
+}
+function saveH(){
+  saveLocalH();
+  if(db) historyRef.set({items:hist}).catch(e=>{console.error(e);toast('⚠️ 클라우드 저장 실패 (로컬 저장됨)','warning');});
+}
+
+// localStorage에서 즉시 로드
+function loadLocal(){
+  try{
+    const r=localStorage.getItem(SK); if(r) payments=JSON.parse(r);
+    const h=localStorage.getItem(HK); if(h) hist=JSON.parse(h);
+  }catch(e){ payments=[]; hist=[]; }
+}
+
+function fmt(n,cur){
+  cur=cur||'KRW';
+  if(cur==='USD') return '$'+new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+  return new Intl.NumberFormat('ko-KR').format(n)+'원';
+}
+function fmtDate(d){ const t=new Date(d); return `${t.getFullYear()}.${String(t.getMonth()+1).padStart(2,'0')}.${String(t.getDate()).padStart(2,'0')}`; }
+function fmtDT(ts){ const d=new Date(ts); return `${fmtDate(ts)} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function getDDay(s){ const t=new Date();t.setHours(0,0,0,0); const d=new Date(s);d.setHours(0,0,0,0); return Math.ceil((d-t)/864e5); }
+function getStatus(dd){
+  if(dd<0) return {label:`D+${Math.abs(dd)}`,cls:'overdue'};
+  if(dd===0) return {label:'D-Day',cls:'today'};
+  if(dd<=3) return {label:`D-${dd}`,cls:'soon'};
+  if(dd<=7) return {label:`D-${dd}`,cls:'upcoming'};
+  return {label:`D-${dd}`,cls:'normal'};
+}
+function uid(){ return 'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,6); }
+function esc(s){ const d=document.createElement('div');d.textContent=s;return d.innerHTML; }
+function catDisplay(p){ return p.category==='기타'&&p.customCat?p.customCat:p.category; }
+function catIcon(p){ return CATS[p.category]||'📋'; }
+function taxLabel(p){ const t=p.taxInvoice||'no'; if(t==='yes')return{text:'세금계산서',cls:'tax-yes'}; if(t==='no')return{text:'미발행',cls:'tax-no'}; return{text:'해당없음',cls:'tax-na'}; }
+
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mainTab').style.display=tab==='main'?'':'none';
+  document.getElementById('historyTab').style.display=tab==='history'?'':'none';
+  if(tab==='history') renderHistory();
+}
+
+function render(){
+  const mK=payments.filter(p=>p.cycle==='monthly'&&(p.currency||'KRW')==='KRW').reduce((s,p)=>s+p.amount,0);
+  const mU=payments.filter(p=>p.cycle==='monthly'&&p.currency==='USD').reduce((s,p)=>s+p.amount,0);
+  const ov=payments.filter(p=>getDDay(p.dueDate)<0).length;
+  const td=payments.filter(p=>getDDay(p.dueDate)===0).length;
+  const wk=payments.filter(p=>{const d=getDDay(p.dueDate);return d>0&&d<=7;}).length;
+  let mt=''; if(mK>0)mt+=fmt(mK,'KRW'); if(mU>0)mt+=(mt?' + ':'')+fmt(mU,'USD'); if(!mt)mt='0원';
+  document.getElementById('statMonthly').textContent=mt;
+  document.getElementById('statOverdue').textContent=ov+'건';
+  document.getElementById('statToday').textContent=td+'건';
+  document.getElementById('statWeek').textContent=wk+'건';
+  document.querySelectorAll('[data-filter]').forEach(b=>{
+    const f=b.dataset.filter;
+    if(f==='overdue')b.textContent=`미결제 (${ov})`;
+    if(f==='today')b.textContent=`오늘 (${td})`;
+    if(f==='week')b.textContent=`이번 주 (${wk})`;
+  });
+  let list=payments.filter(p=>{
+    if(searchQuery){const q=searchQuery.toLowerCase();if(!p.name.toLowerCase().includes(q)&&!catDisplay(p).toLowerCase().includes(q)&&!(p.memo||'').toLowerCase().includes(q))return false;}
+    const dd=getDDay(p.dueDate);
+    if(currentFilter==='overdue')return dd<0;if(currentFilter==='today')return dd===0;if(currentFilter==='week')return dd>=0&&dd<=7;return true;
+  }).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate));
+
+  const el=document.getElementById('paymentList');
+  if(!list.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">${searchQuery?'🔍':'📭'}</div><div class="empty-text">${searchQuery?'검색 결과가 없습니다':'등록된 결제가 없습니다'}</div></div>`;return;}
+  el.innerHTML=list.map(p=>{
+    const dd=getDDay(p.dueDate),st=getStatus(dd),cur=p.currency||'KRW',tx=taxLabel(p);
+    return `<div class="payment-item ${st.cls}">
+      <div class="pay-icon">${catIcon(p)}</div>
+      <div class="pay-info">
+        <div class="pay-top">
+          <span class="pay-name">${esc(p.name)}</span>
+          <span class="badge ${st.cls}">${st.label}</span>
+          <span class="badge ${tx.cls}">${tx.text}</span>
+          ${cur==='USD'?'<span style="font-size:11px;color:var(--text-muted)">USD</span>':''}
+        </div>
+        <div class="pay-meta">
+          <span>${fmtDate(p.dueDate)}</span><span>${CYCLES[p.cycle]}</span><span>${esc(catDisplay(p))}</span>
+          ${p.memo?`<span style="color:var(--text-muted)">· ${esc(p.memo)}</span>`:''}
+        </div>
+      </div>
+      <div class="pay-amount">${fmt(p.amount,cur)}</div>
+      <div class="pay-actions">
+        <button class="btn-ghost" title="결제 완료" onclick="complete('${p.id}')">✓</button>
+        <button class="btn-ghost" title="수정" onclick="editP('${p.id}')">✎</button>
+        <button class="btn-danger" title="삭제" onclick="del('${p.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  let list=[...hist];
+  const now=new Date();
+  if(hFilter==='month'){const s=new Date(now.getFullYear(),now.getMonth(),1).getTime();list=list.filter(h=>h.completedAt>=s);}
+  else if(hFilter==='3month'){const s=new Date(now.getFullYear(),now.getMonth()-2,1).getTime();list=list.filter(h=>h.completedAt>=s);}
+  if(hSearch){const q=hSearch.toLowerCase();list=list.filter(h=>h.name.toLowerCase().includes(q)||catDisplay(h).toLowerCase().includes(q));}
+  list.sort((a,b)=>b.completedAt-a.completedAt);
+
+  const tK=list.filter(h=>(h.currency||'KRW')==='KRW').reduce((s,h)=>s+h.amount,0);
+  const tU=list.filter(h=>h.currency==='USD').reduce((s,h)=>s+h.amount,0);
+  document.getElementById('historySummary').innerHTML=`
+    <div class="history-stat"><span class="history-stat-label">총 결제 건수</span><span class="history-stat-value" style="color:var(--accent-light)">${list.length}건</span></div>
+    ${tK>0?`<div class="history-stat"><span class="history-stat-label">총 결제액 (원)</span><span class="history-stat-value" style="color:var(--warning)">${fmt(tK,'KRW')}</span></div>`:''}
+    ${tU>0?`<div class="history-stat"><span class="history-stat-label">총 결제액 (달러)</span><span class="history-stat-value" style="color:var(--success)">${fmt(tU,'USD')}</span></div>`:''}
+  `;
+
+  const el=document.getElementById('historyList');
+  if(!list.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📜</div><div class="empty-text">결제 완료 기록이 없습니다<br><span style="font-size:12px;color:var(--text-muted)">결제 항목에서 ✓ 버튼을 누르면 여기에 기록됩니다</span></div></div>`;return;}
+
+  const groups={};
+  list.forEach(h=>{const k=fmtDate(h.completedAt);if(!groups[k])groups[k]=[];groups[k].push(h);});
+
+  let html='';
+  Object.entries(groups).forEach(([date,items])=>{
+    const dK=items.filter(h=>(h.currency||'KRW')==='KRW').reduce((s,h)=>s+h.amount,0);
+    const dU=items.filter(h=>h.currency==='USD').reduce((s,h)=>s+h.amount,0);
+    let ds='';if(dK>0)ds+=fmt(dK,'KRW');if(dU>0)ds+=(ds?' + ':'')+fmt(dU,'USD');
+    html+=`<div class="history-date-group"><div class="history-date-label">${date} <span style="font-weight:400;margin-left:8px;font-size:11px">${ds}</span></div><div class="payment-list">`;
+    items.forEach(h=>{
+      html+=`<div class="history-item">
+        <div class="pay-icon" style="width:38px;height:38px;font-size:17px;opacity:.7">${catIcon(h)}</div>
+        <div class="pay-info">
+          <div class="pay-name" style="font-size:13px">${esc(h.name)}</div>
+          <div class="history-meta">${esc(catDisplay(h))} · ${CYCLES[h.cycle]||''} · ${taxLabel(h).text} · ${fmtDT(h.completedAt)}</div>
+        </div>
+        <div class="history-amount">${fmt(h.amount,h.currency||'KRW')}</div>
+        <button class="btn-danger" title="기록 삭제" onclick="delH('${h.id}')">✕</button>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  });
+  el.innerHTML=html;
+}
+
+function setFilter(f,btn){currentFilter=f;document.querySelectorAll('[data-filter]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');render();}
+function setHFilter(f,btn){hFilter=f;document.querySelectorAll('[data-hfilter]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderHistory();}
+function toggleCustomCat(){document.getElementById('customCatGroup').style.display=document.getElementById('fCategory').value==='기타'?'':'none';}
+
+function openModal(id){
+  editId=id||null;
+  document.getElementById('modalTitle').textContent=editId?'결제 수정':'새 결제 등록';
+  document.getElementById('saveBtn').textContent=editId?'수정 완료':'등록하기';
+  if(editId){
+    const p=payments.find(x=>x.id===editId);
+    if(p){document.getElementById('fName').value=p.name;document.getElementById('fCurrency').value=p.currency||'KRW';document.getElementById('fAmount').value=p.amount;document.getElementById('fDate').value=p.dueDate;document.getElementById('fCycle').value=p.cycle;document.getElementById('fCategory').value=p.category;document.getElementById('fCustomCat').value=p.customCat||'';document.getElementById('fTax').value=p.taxInvoice||'no';document.getElementById('fMemo').value=p.memo||'';}
+  }else{['fName','fAmount','fDate','fMemo','fCustomCat'].forEach(i=>document.getElementById(i).value='');document.getElementById('fCurrency').value='KRW';document.getElementById('fCycle').value='monthly';document.getElementById('fCategory').value='서비스';document.getElementById('fTax').value='no';}
+  toggleCustomCat();
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('fName').focus(),100);
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');editId=null;}
+
+function savePayment(){
+  const name=document.getElementById('fName').value.trim();
+  const amount=Number(document.getElementById('fAmount').value);
+  const dueDate=document.getElementById('fDate').value;
+  const currency=document.getElementById('fCurrency').value;
+  const cycle=document.getElementById('fCycle').value;
+  const category=document.getElementById('fCategory').value;
+  const customCat=document.getElementById('fCustomCat').value.trim();
+  const taxInvoice=document.getElementById('fTax').value;
+  const memo=document.getElementById('fMemo').value.trim();
+  if(!name||!amount||!dueDate){toast('⚠️ 항목명, 금액, 결제일을 모두 입력해주세요','warning');return;}
+  if(editId){payments=payments.map(p=>p.id===editId?{...p,name,amount,currency,dueDate,cycle,category,customCat,taxInvoice,memo}:p);toast('✏️ 수정 완료!','success');}
+  else{payments.push({id:uid(),name,amount,currency,dueDate,cycle,category,customCat,taxInvoice,memo,createdAt:Date.now()});toast('✅ 등록 완료!','success');}
+  save();render();closeModal();
+}
+function editP(id){openModal(id);}
+function del(id){const p=payments.find(x=>x.id===id);if(confirm(`"${p.name}" 항목을 삭제하시겠습니까?`)){payments=payments.filter(x=>x.id!==id);save();render();toast('🗑️ 삭제되었습니다','danger');}}
+
+function complete(id){
+  const p=payments.find(x=>x.id===id);if(!p)return;
+  hist.push({id:'h_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),name:p.name,amount:p.amount,currency:p.currency||'KRW',category:p.category,customCat:p.customCat||'',taxInvoice:p.taxInvoice||'no',cycle:p.cycle,memo:p.memo,completedAt:Date.now()});
+  saveH();
+  if(p.cycle==='once'){payments=payments.filter(x=>x.id!==id);toast(`✅ "${p.name}" 결제 완료 (1회성 삭제됨)`,'success');}
+  else{const d=new Date(p.dueDate);if(p.cycle==='monthly')d.setMonth(d.getMonth()+1);else if(p.cycle==='yearly')d.setFullYear(d.getFullYear()+1);else if(p.cycle==='weekly')d.setDate(d.getDate()+7);p.dueDate=d.toISOString().split('T')[0];toast(`✅ "${p.name}" 결제 완료 → 다음: ${fmtDate(p.dueDate)}`,'success');}
+  save();render();
+}
+function delH(id){hist=hist.filter(h=>h.id!==id);saveH();renderHistory();toast('🗑️ 기록 삭제됨','danger');}
+
+function toggleNotif(){
+  notifEnabled=!notifEnabled;
+  const btn=document.getElementById('notifBtn');
+  btn.textContent=notifEnabled?'🔔 알림 ON':'🔕 알림 OFF';
+  btn.classList.toggle('active',notifEnabled);
+  if(notifEnabled){if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();checkNotif();toast('🔔 알림이 활성화되었습니다','success');}
+  else toast('🔕 알림이 비활성화되었습니다','warning');
+}
+function checkNotif(){
+  if(!notifEnabled||notifChecked)return;notifChecked=true;
+  const ov=payments.filter(p=>getDDay(p.dueDate)<0),td=payments.filter(p=>getDDay(p.dueDate)===0);
+  if(td.length>0){toast(`📌 오늘 결제 ${td.length}건: ${td.map(p=>p.name).join(', ')}`,'warning');sendN(`오늘 결제 ${td.length}건`,td.map(p=>`${p.name} ${fmt(p.amount,p.currency)}`).join('\n'));}
+  if(ov.length>0)setTimeout(()=>{toast(`🚨 미결제 ${ov.length}건: ${ov.map(p=>p.name).join(', ')}`,'danger');sendN(`미결제 ${ov.length}건`,ov.map(p=>`${p.name} ${fmt(p.amount,p.currency)}`).join('\n'));},500);
+}
+function sendN(t,b){if('Notification'in window&&Notification.permission==='granted')new Notification('💰 결제 관리 - '+t,{body:b});}
+
+function toast(msg,type='success'){const c=document.getElementById('toastContainer'),t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=`<span>${msg}</span>`;c.appendChild(t);setTimeout(()=>t.remove(),4000);}
+
+function exportData(){
+  const data={payments,history:hist,exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download=`결제관리_백업_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();URL.revokeObjectURL(url);
+  toast('💾 백업 파일이 다운로드되었습니다','success');
+}
+function importData(){document.getElementById('importFile').click();}
+function handleImport(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(data.payments)payments=data.payments;
+      if(data.history)hist=data.history;
+      save();saveH();render();
+      toast(`📂 복원 완료! (결제 ${payments.length}건, 히스토리 ${hist.length}건)`,'success');
+    }catch{toast('⚠️ 파일을 읽을 수 없습니다','danger');}
+  };
+  reader.readAsText(file);e.target.value='';
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if(e.key==='Enter'&&document.getElementById('modalOverlay').classList.contains('open'))savePayment();});
+
+// ─── 초기화: localStorage 먼저 로드 (즉시 표시) ───
+loadLocal();
+render();
+
+// ─── Firebase 실시간 리스너 (설정된 경우만) ───
+if(db){
+  let firstPayload=true, firstHistory=true;
+  paymentsRef.onSnapshot(doc=>{
+    if(doc.exists && doc.data().items && doc.data().items.length>0){
+      payments=doc.data().items;
+      saveLocal(); // Firebase→localStorage 동기화
+    }else if(firstPayload && payments.length>0){
+      // Firebase 비어있고 localStorage에 데이터 있음 → 자동 마이그레이션
+      paymentsRef.set({items:payments});
+    }
+    firstPayload=false;
+    render();
+    updateSyncStatus('cloud');
+  },err=>{
+    console.error('Firestore error:',err);
+    updateSyncStatus('error');
+  });
+
+  historyRef.onSnapshot(doc=>{
+    if(doc.exists && doc.data().items && doc.data().items.length>0){
+      hist=doc.data().items;
+      saveLocalH();
+    }else if(firstHistory && hist.length>0){
+      historyRef.set({items:hist});
+    }
+    firstHistory=false;
+    if(document.getElementById('historyTab').style.display!=='none') renderHistory();
+  },err=>console.error('Firestore history error:',err));
+}else{
+  updateSyncStatus('local');
+}
+
+function updateSyncStatus(mode){
+  const el=document.getElementById('syncStatus');
+  const ft=document.querySelector('.footer-inner');
+  if(mode==='cloud'){
+    if(el) el.textContent='클라우드 · 실시간 동기화';
+    if(ft) ft.innerHTML='<span class="pulse-dot"></span>클라우드 저장 · 실시간 동기화';
+  }else if(mode==='error'){
+    if(el) el.textContent='로컬 저장 중 · 클라우드 재연결 시도';
+    if(ft) ft.innerHTML='<span class="pulse-dot" style="background:var(--warning)"></span>로컬 저장 · 클라우드 재연결 중';
+  }else{
+    if(el) el.textContent='로컬 저장 모드';
+    if(ft) ft.innerHTML='<span class="pulse-dot" style="background:var(--accent)"></span>로컬 저장 · Firebase 설정 후 클라우드 동기화 가능';
+  }
+}
+</script>
+</body>
+</html>
